@@ -64,11 +64,11 @@ async def lifespan(app: FastAPI):
 
                 # Seed users
                 for udata in [
-                    ("admin", "admin@smartretail.com", "admin123", "admin", "Admin User"),
-                    ("manager", "manager@smartretail.com", "manager123", "manager", "Store Manager"),
-                    ("cashier", "cashier@smartretail.com", "cashier123", "cashier", "Cashier Staff"),
+                    ("admin", "admin@smartretail.com", "admin123", "ADMIN", "Admin User"),
+                    ("manager", "manager@smartretail.com", "manager123", "MANAGER", "Store Manager"),
+                    ("cashier", "cashier@smartretail.com", "cashier123", "CASHIER", "Cashier Staff"),
                 ]:
-                    db.add(User(username=udata[0], email=udata[1], hashed_password=hash_password(udata[2]), role=udata[3], full_name=udata[4], is_active=True))
+                    db.add(User(username=udata[0], email=udata[1], password_hash=hash_password(udata[2]), role=udata[3], full_name=udata[4], is_active=True))
                 db.commit()
 
                 # Seed categories
