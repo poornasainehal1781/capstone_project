@@ -2,19 +2,20 @@ import React, { useState } from 'react';
 import { Store, ShieldCheck, Lock, User, ArrowRight, Sparkles, CheckCircle2, AlertCircle, RefreshCw, Server } from 'lucide-react';
 import { MOCK_USERS, STORE_INFO } from '../data/mockData';
 import { authApi } from '../services/authApi';
+import { API_BASE } from '../services/apiConfig';
 
 export const Login = ({ onLoginSuccess }) => {
   const [selectedRole, setSelectedRole] = useState("ADMIN");
-  const [username, setUsername] = useState("admin_rajesh");
-  const [password, setPassword] = useState("Admin@123");
+  const [username, setUsername] = useState("admin");
+  const [password, setPassword] = useState("admin123");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [backendConnected, setBackendConnected] = useState(true);
 
   const roleCredentials = {
-    ADMIN: { username: "admin_rajesh", password: "Admin@123", desc: "Full Access & Staff Admin" },
-    MANAGER: { username: "mgr_priya", password: "Manager@123", desc: "Inventory, Batches & POs" },
-    CASHIER: { username: "cashier_karan", password: "Cashier@123", desc: "POS Billing Terminal" },
+    ADMIN: { username: "admin", password: "admin123", desc: "Full Access & Staff Admin" },
+    MANAGER: { username: "manager", password: "manager123", desc: "Inventory, Batches & POs" },
+    CASHIER: { username: "cashier", password: "cashier123", desc: "POS Billing Terminal" },
   };
 
   const handleRoleSelect = (role) => {
@@ -57,7 +58,7 @@ export const Login = ({ onLoginSuccess }) => {
       console.error("Login attempt failed:", err);
       // Check if it was a network error (backend offline) or bad credentials
       if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError")) {
-        setErrorMessage("Could not connect to FastAPI backend at http://127.0.0.1:8000. Operating in offline demo fallback mode.");
+        setErrorMessage(`Could not connect to backend. Operating in offline demo fallback mode.`);
         setBackendConnected(false);
         // Fallback to demo user if backend is offline
         setTimeout(() => {
@@ -203,9 +204,9 @@ export const Login = ({ onLoginSuccess }) => {
           {/* Backend Connection Indicator */}
           <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
             <span>FastAPI Backend:</span>
-            <span className="flex items-center gap-1.5 text-emerald-400 font-mono font-semibold">
+            <span className="flex items-center gap-1.5 text-emerald-400 font-mono font-semibold" style={{fontSize:'9px'}}>
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>http://127.0.0.1:8000</span>
+              <span>{API_BASE.replace('/api/v1','')}</span>
             </span>
           </div>
         </div>
