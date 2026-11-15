@@ -45,6 +45,86 @@ async def lifespan(app: FastAPI):
         logger.info(f"Database schema verified. Registered tables: {list(Base.metadata.tables.keys())}")
     except Exception as exc:
         logger.error(f"Error initializing database schema at startup: {exc}")
+    # Auto-seed database with demo data if empty
+    try:
+        from app.database import SessionLocal
+        from app.models.user import User
+        from app.models.category import Category
+        from app.models.product import Product
+        from app.models.supplier import Supplier
+        from app.models.customer import Customer
+        from app.core.security import get_password_hash
+        import random
+
+        db = SessionLocal()
+        try:
+            user_count = db.query(User).count()
+            if user_count == 0:
+                logger.info("Empty database detected — seeding demo data...")
+
+                # Seed users
+                for udata in [
+                    ("admin", "admin@smartretail.com", "admin123", "admin", "Admin User"),
+                    ("manager", "manager@smartretail.com", "manager123", "manager", "Store Manager"),
+                    ("cashier", "cashier@smartretail.com", "cashier123", "cashier", "Cashier Staff"),
+                ]:
+                    db.add(User(username=udata[0], email=udata[1], hashed_password=get_password_hash(udata[2]), role=udata[3], full_name=udata[4], is_active=True))
+                db.commit()
+
+                # Seed categories
+                cat_names = ["Beverages", "Dairy", "Bakery", "Snacks", "Fruits & Vegetables", "Meat & Seafood", "Personal Care", "Household"]
+                cat_objs = []
+                for c in cat_names:
+                    cat = Category(name=c, description=f"{c} products")
+                    db.add(cat)
+                    cat_objs.append(cat)
+                db.commit()
+
+                # Seed supplier
+                sup = Supplier(name="Metro Wholesale Pvt Ltd", contact_person="Ravi Kumar", email="ravi@metrowholesale.com", phone="9876543210", address="Industrial Area, Bangalore")
+                db.add(sup)
+                db.commit()
+
+                # Seed products
+                for pdata in [
+                    ("Amul Full Cream Milk 1L", 1, 68, 55, 150, 20),
+                    ("Britannia Bread 400g", 2, 45, 35, 200, 30),
+                    ("Lay's Classic Salted 100g", 3, 20, 14, 500, 50),
+                    ("Coca-Cola 750ml", 0, 45, 32, 300, 40),
+                    ("Colgate Toothpaste 200g", 6, 95, 72, 180, 25),
+                    ("Surf Excel 1kg", 7, 185, 145, 100, 15),
+                    ("Basmati Rice 5kg", 4, 450, 360, 80, 10),
+                    ("Haldiram's Namkeen 400g", 3, 120, 90, 250, 30),
+                    ("Tropicana Orange Juice 1L", 0, 110, 82, 120, 20),
+                    ("Parle-G Biscuits 800g", 2, 55, 40, 300, 40),
+                    ("Dettol Soap 75g", 6, 45, 32, 200, 25),
+                    ("Tomatoes 1kg", 4, 40, 25, 100, 20),
+                    ("Paneer 200g", 1, 85, 65, 80, 15),
+                ]:
+                    db.add(Product(
+                        name=pdata[0], barcode=f"SR{random.randint(1000000,9999999)}",
+                        category_id=cat_objs[pdata[1]].id, selling_price=pdata[2],
+                        cost_price=pdata[3], current_stock=pdata[4], minimum_stock=pdata[5],
+                        unit="piece", is_active=True, supplier_id=sup.id
+                    ))
+                db.commit()
+
+                # Seed customers
+                for cdata in [
+                    ("Priya Sharma", "priya@email.com", "9876501234"),
+                    ("Rahul Verma", "rahul@email.com", "9876502345"),
+                    ("Anjali Singh", "anjali@email.com", "9876503456"),
+                    ("Suresh Patel", "suresh@email.com", "9876504567"),
+                ]:
+                    db.add(Customer(name=cdata[0], email=cdata[1], phone=cdata[2], loyalty_points=random.randint(0, 500), total_purchases=random.uniform(500, 5000)))
+                db.commit()
+                logger.info("✅ Demo data seeded: users, categories, products, customers")
+            else:
+                logger.info(f"Database has {user_count} users — skipping seed")
+        finally:
+            db.close()
+    except Exception as seed_exc:
+        logger.error(f"Auto-seed failed (non-critical): {seed_exc}")
 
     yield
 
