@@ -53,7 +53,7 @@ async def lifespan(app: FastAPI):
         from app.models.product import Product
         from app.models.supplier import Supplier
         from app.models.customer import Customer
-        from app.core.security import get_password_hash
+        from app.core.security import hash_password
         import random
 
         db = SessionLocal()
@@ -68,7 +68,7 @@ async def lifespan(app: FastAPI):
                     ("manager", "manager@smartretail.com", "manager123", "manager", "Store Manager"),
                     ("cashier", "cashier@smartretail.com", "cashier123", "cashier", "Cashier Staff"),
                 ]:
-                    db.add(User(username=udata[0], email=udata[1], hashed_password=get_password_hash(udata[2]), role=udata[3], full_name=udata[4], is_active=True))
+                    db.add(User(username=udata[0], email=udata[1], hashed_password=hash_password(udata[2]), role=udata[3], full_name=udata[4], is_active=True))
                 db.commit()
 
                 # Seed categories
