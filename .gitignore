@@ -32,6 +32,7 @@ env/
 .env
 .env.*
 !.env.example
+!.env.production
 secrets.json
 
 # Databases & Local Data
