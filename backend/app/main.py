@@ -60,76 +60,151 @@ async def lifespan(app: FastAPI):
         try:
             user_count = db.query(User).count()
             product_count = db.query(Product).count()
-            if user_count == 0 or product_count == 0:
-                logger.info(f"Seeding required (users={user_count}, products={product_count}) — running seed...")
+            supplier_count = db.query(Supplier).count()
 
-                # Seed users (only if none exist)
+            if user_count == 0 or product_count == 0 or supplier_count == 0:
+                logger.info(f"Seeding required — users={user_count}, products={product_count}, suppliers={supplier_count}")
+
+                # ── USERS ──────────────────────────────────────────────
                 if user_count == 0:
-                    for udata in [
-                        ("admin", "admin@smartretail.com", "admin123", "ADMIN", "Admin User"),
+                    for u in [
+                        ("admin",   "admin@smartretail.com",   "admin123",   "ADMIN",   "Admin User"),
                         ("manager", "manager@smartretail.com", "manager123", "MANAGER", "Store Manager"),
                         ("cashier", "cashier@smartretail.com", "cashier123", "CASHIER", "Cashier Staff"),
+                        ("manager2","manager2@smartretail.com","manager123", "MANAGER", "Assistant Manager"),
+                        ("cashier2","cashier2@smartretail.com","cashier123", "CASHIER", "Cashier 2"),
                     ]:
-                        db.add(User(username=udata[0], email=udata[1], password_hash=hash_password(udata[2]), role=udata[3], full_name=udata[4], is_active=True))
+                        db.add(User(username=u[0], email=u[1], password_hash=hash_password(u[2]), role=u[3], full_name=u[4], is_active=True))
                     db.commit()
-                    logger.info("Users seeded")
+                    logger.info("✅ Users seeded")
 
-                # Seed categories (get existing or create new)
+                # ── CATEGORIES ─────────────────────────────────────────
                 cat_objs = db.query(Category).order_by(Category.id).all()
                 if len(cat_objs) == 0:
-                    for c in [
-                        ("Beverages", "BEV"), ("Dairy", "DAI"), ("Bakery", "BAK"),
-                        ("Snacks", "SNA"), ("Fruits & Vegetables", "FRV"),
-                        ("Meat & Seafood", "MEA"), ("Personal Care", "PER"), ("Household", "HOU")
-                    ]:
-                        obj = Category(name=c[0], code=c[1], description=f"{c[0]} products")
-                        db.add(obj)
-                        cat_objs.append(obj)
+                    cats = [
+                        ("Beverages",          "BEV", "Cold drinks, juices, water, tea & coffee"),
+                        ("Dairy & Eggs",        "DAI", "Milk, cheese, curd, paneer, butter & eggs"),
+                        ("Bakery & Bread",      "BAK", "Bread, cakes, biscuits & baked goods"),
+                        ("Snacks & Namkeen",    "SNA", "Chips, namkeen, popcorn & packaged snacks"),
+                        ("Fruits & Vegetables", "FRV", "Fresh fruits and seasonal vegetables"),
+                        ("Meat & Seafood",      "MEA", "Chicken, mutton, fish and seafood"),
+                        ("Personal Care",       "PER", "Soap, shampoo, toothpaste & skincare"),
+                        ("Household & Cleaning","HOU", "Detergent, cleaners, mops & household supplies"),
+                        ("Staples & Grains",    "STA", "Rice, wheat, pulses, oil & sugar"),
+                        ("Frozen Foods",        "FRZ", "Ice cream, frozen meals & frozen vegetables"),
+                    ]
+                    for c in cats:
+                        db.add(Category(name=c[0], code=c[1], description=c[2]))
                     db.commit()
                     cat_objs = db.query(Category).order_by(Category.id).all()
-                    logger.info("Categories seeded")
+                    logger.info("✅ Categories seeded")
 
-                # Seed products (only if none exist and categories available)
-                if product_count == 0 and len(cat_objs) >= 8:
-                    for pdata in [
-                        ("Amul Full Cream Milk 1L", 1, 68, 55, 150, 20),
-                        ("Britannia Bread 400g", 2, 45, 35, 200, 30),
-                        ("Lay's Classic Salted 100g", 3, 20, 14, 500, 50),
-                        ("Coca-Cola 750ml", 0, 45, 32, 300, 40),
-                        ("Colgate Toothpaste 200g", 6, 95, 72, 180, 25),
-                        ("Surf Excel 1kg", 7, 185, 145, 100, 15),
-                        ("Basmati Rice 5kg", 4, 450, 360, 80, 10),
-                        ("Haldiram Namkeen 400g", 3, 120, 90, 250, 30),
-                        ("Tropicana Orange Juice 1L", 0, 110, 82, 120, 20),
-                        ("Parle-G Biscuits 800g", 2, 55, 40, 300, 40),
-                        ("Dettol Soap 75g", 6, 45, 32, 200, 25),
-                        ("Tomatoes 1kg", 4, 40, 25, 100, 20),
-                        ("Paneer 200g", 1, 85, 65, 80, 15),
-                    ]:
+                # Build category lookup by code
+                cat_map = {c.code: c.id for c in cat_objs}
+
+                # ── SUPPLIERS ──────────────────────────────────────────
+                if supplier_count == 0:
+                    suppliers = [
+                        ("Metro Wholesale Pvt Ltd",    "Ravi Kumar",    "9876543210", "ravi@metrowholesale.com",    3, "Net 30"),
+                        ("HUL Distributor Chennai",    "Meena Rajan",   "9876543220", "meena@huldist.com",          2, "Net 15"),
+                        ("ITC Foods Bangalore",        "Suresh Nair",   "9876543230", "suresh@itcfoods.com",        4, "Net 45"),
+                        ("Amul Regional Office",       "Priya Patel",   "9876543240", "priya@amul.coop",            1, "Net 7"),
+                        ("Reliance Fresh Supply Co",   "Amit Sharma",   "9876543250", "amit@reliancefresh.com",     5, "Net 30"),
+                        ("Nestle India Distributor",   "Kavya Reddy",   "9876543260", "kavya@nestledist.com",       3, "Net 30"),
+                        ("P&G Distributor Hyderabad",  "Rahul Mehta",   "9876543270", "rahul@pgdist.com",           2, "Net 21"),
+                    ]
+                    for s in suppliers:
+                        db.add(Supplier(name=s[0], contact_person=s[1], phone=s[2], email=s[3], lead_time_days=s[4], credit_terms=s[5], is_active=True))
+                    db.commit()
+                    logger.info("✅ Suppliers seeded")
+
+                # ── PRODUCTS ───────────────────────────────────────────
+                if product_count == 0 and len(cat_objs) >= 1:
+                    # (name, category_code, selling_price, cost_price, stock, min_stock, unit, perishable, sku)
+                    products = [
+                        # Beverages
+                        ("Coca-Cola 750ml",             "BEV", 45,  32,  300, 40, "bottle", False, "BEV001"),
+                        ("Pepsi 2L",                    "BEV", 90,  65,  200, 30, "bottle", False, "BEV002"),
+                        ("Tropicana Orange Juice 1L",   "BEV", 110, 82,  120, 20, "pack",   False, "BEV003"),
+                        ("Red Bull 250ml",               "BEV", 125, 95,  150, 25, "can",    False, "BEV004"),
+                        ("Nescafe Classic 200g",         "BEV", 320, 245, 80,  10, "jar",    False, "BEV005"),
+                        ("Lipton Green Tea 100 bags",    "BEV", 185, 140, 90,  12, "box",    False, "BEV006"),
+                        # Dairy
+                        ("Amul Full Cream Milk 1L",      "DAI", 68,  55,  150, 20, "packet", True,  "DAI001"),
+                        ("Amul Butter 500g",             "DAI", 265, 220, 80,  10, "pack",   True,  "DAI002"),
+                        ("Mother Dairy Curd 400g",       "DAI", 45,  36,  120, 15, "cup",    True,  "DAI003"),
+                        ("Amul Paneer 200g",             "DAI", 85,  65,  80,  10, "pack",   True,  "DAI004"),
+                        ("Britannia Cheese Slice 200g",  "DAI", 110, 85,  100, 15, "pack",   False, "DAI005"),
+                        # Bakery
+                        ("Britannia Brown Bread 400g",   "BAK", 45,  35,  200, 30, "piece",  True,  "BAK001"),
+                        ("Parle-G Biscuits 800g",        "BAK", 55,  40,  300, 40, "pack",   False, "BAK002"),
+                        ("Hide & Seek Cookies 100g",     "BAK", 30,  22,  250, 35, "pack",   False, "BAK003"),
+                        ("Britannia Good Day 200g",      "BAK", 40,  30,  280, 35, "pack",   False, "BAK004"),
+                        # Snacks
+                        ("Lay's Classic Salted 100g",    "SNA", 20,  14,  500, 50, "pack",   False, "SNA001"),
+                        ("Haldiram Namkeen 400g",        "SNA", 120, 90,  250, 30, "pack",   False, "SNA002"),
+                        ("Kurkure Masala Munch 90g",     "SNA", 20,  14,  400, 50, "pack",   False, "SNA003"),
+                        ("Pringles Original 134g",       "SNA", 180, 140, 150, 20, "can",    False, "SNA004"),
+                        ("Bingo Mad Angles 90g",         "SNA", 20,  14,  350, 45, "pack",   False, "SNA005"),
+                        # Fruits & Vegetables
+                        ("Tomatoes 1kg",                 "FRV", 40,  25,  100, 20, "kg",     True,  "FRV001"),
+                        ("Onions 1kg",                   "FRV", 35,  22,  150, 25, "kg",     True,  "FRV002"),
+                        ("Bananas 1 dozen",              "FRV", 60,  40,  80,  12, "dozen",  True,  "FRV003"),
+                        ("Apples 1kg",                   "FRV", 180, 135, 60,  10, "kg",     True,  "FRV004"),
+                        # Personal Care
+                        ("Colgate Toothpaste 200g",      "PER", 95,  72,  180, 25, "tube",   False, "PER001"),
+                        ("Dettol Soap 75g",              "PER", 45,  32,  200, 25, "bar",    False, "PER002"),
+                        ("Head & Shoulders 180ml",       "PER", 185, 145, 120, 15, "bottle", False, "PER003"),
+                        ("Dove Body Lotion 200ml",       "PER", 220, 175, 90,  12, "bottle", False, "PER004"),
+                        # Household
+                        ("Surf Excel 1kg",               "HOU", 185, 145, 100, 15, "pack",   False, "HOU001"),
+                        ("Harpic Power Plus 500ml",      "HOU", 130, 98,  120, 15, "bottle", False, "HOU002"),
+                        ("Vim Dish Wash Bar 200g",       "HOU", 30,  22,  250, 30, "bar",    False, "HOU003"),
+                        # Staples
+                        ("Basmati Rice 5kg",             "STA", 450, 360, 80,  10, "bag",    False, "STA001"),
+                        ("Tata Salt 1kg",                "STA", 25,  18,  300, 40, "pack",   False, "STA002"),
+                        ("Fortune Sunflower Oil 1L",     "STA", 165, 130, 120, 15, "bottle", False, "STA003"),
+                        ("Toor Dal 1kg",                 "STA", 140, 108, 100, 15, "pack",   False, "STA004"),
+                    ]
+                    barcodes_used = set()
+                    for p in products:
+                        while True:
+                            bc = f"SR{random.randint(1000000,9999999)}"
+                            if bc not in barcodes_used:
+                                barcodes_used.add(bc)
+                                break
+                        cat_id = cat_map.get(p[1], cat_objs[0].id)
                         db.add(Product(
-                            name=pdata[0], barcode=f"SR{random.randint(1000000,9999999)}",
-                            category_id=cat_objs[pdata[1]].id, selling_price=pdata[2],
-                            cost_price=pdata[3], current_stock=pdata[4], min_stock_level=pdata[5],
-                            unit="piece"
+                            name=p[0], barcode=bc, sku=p[8],
+                            category_id=cat_id, selling_price=p[2],
+                            cost_price=p[3], current_stock=p[4], min_stock_level=p[5],
+                            unit=p[6], is_perishable=p[7], tax_rate=5.0
                         ))
                     db.commit()
-                    logger.info("Products seeded")
+                    logger.info(f"✅ {len(products)} products seeded")
 
-                # Seed customers (only if none exist)
+                # ── CUSTOMERS ──────────────────────────────────────────
                 if db.query(Customer).count() == 0:
-                    for cdata in [
-                        ("Priya Sharma", "priya@email.com", "9876501234"),
-                        ("Rahul Verma", "rahul@email.com", "9876502345"),
-                        ("Anjali Singh", "anjali@email.com", "9876503456"),
-                        ("Suresh Patel", "suresh@email.com", "9876504567"),
-                    ]:
-                        db.add(Customer(name=cdata[0], email=cdata[1], phone=cdata[2], loyalty_points=random.randint(0, 500)))
+                    customers = [
+                        ("Priya Sharma",    "priya@gmail.com",   "9876501234", 1250, "Gold"),
+                        ("Rahul Verma",     "rahul@gmail.com",   "9876502345", 320,  "Silver"),
+                        ("Anjali Singh",    "anjali@gmail.com",  "9876503456", 2800, "Platinum"),
+                        ("Suresh Patel",    "suresh@gmail.com",  "9876504567", 150,  "Silver"),
+                        ("Meena Reddy",     "meena@gmail.com",   "9876505678", 980,  "Gold"),
+                        ("Kiran Kumar",     "kiran@gmail.com",   "9876506789", 450,  "Silver"),
+                        ("Deepa Nair",      "deepa@gmail.com",   "9876507890", 3500, "Platinum"),
+                        ("Arun Joshi",      "arun@gmail.com",    "9876508901", 75,   "Silver"),
+                        ("Sunita Gupta",    "sunita@gmail.com",  "9876509012", 1800, "Gold"),
+                        ("Vijay Krishnan",  "vijay@gmail.com",   "9876500123", 620,  "Silver"),
+                    ]
+                    for c in customers:
+                        db.add(Customer(name=c[0], email=c[1], phone=c[2], loyalty_points=c[3], tier=c[4]))
                     db.commit()
-                    logger.info("Customers seeded")
+                    logger.info("✅ Customers seeded")
 
-                logger.info("✅ Demo data seeding complete!")
+                logger.info("✅ All demo data seeded successfully!")
             else:
-                logger.info(f"Database already has {user_count} users and {product_count} products — skipping seed")
+                logger.info(f"Database already populated — users={user_count}, products={product_count}, suppliers={supplier_count}")
         finally:
             db.close()
     except Exception as seed_exc:
