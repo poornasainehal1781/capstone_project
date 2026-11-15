@@ -77,8 +77,12 @@ async def lifespan(app: FastAPI):
                 # Seed categories (get existing or create new)
                 cat_objs = db.query(Category).order_by(Category.id).all()
                 if len(cat_objs) == 0:
-                    for c in ["Beverages", "Dairy", "Bakery", "Snacks", "Fruits & Vegetables", "Meat & Seafood", "Personal Care", "Household"]:
-                        obj = Category(name=c, description=f"{c} products")
+                    for c in [
+                        ("Beverages", "BEV"), ("Dairy", "DAI"), ("Bakery", "BAK"),
+                        ("Snacks", "SNA"), ("Fruits & Vegetables", "FRV"),
+                        ("Meat & Seafood", "MEA"), ("Personal Care", "PER"), ("Household", "HOU")
+                    ]:
+                        obj = Category(name=c[0], code=c[1], description=f"{c[0]} products")
                         db.add(obj)
                         cat_objs.append(obj)
                     db.commit()
