@@ -104,8 +104,8 @@ async def lifespan(app: FastAPI):
                     db.add(Product(
                         name=pdata[0], barcode=f"SR{random.randint(1000000,9999999)}",
                         category_id=cat_objs[pdata[1]].id, selling_price=pdata[2],
-                        cost_price=pdata[3], current_stock=pdata[4], minimum_stock=pdata[5],
-                        unit="piece", is_active=True, supplier_id=sup.id
+                        cost_price=pdata[3], current_stock=pdata[4], min_stock_level=pdata[5],
+                        unit="piece"
                     ))
                 db.commit()
 
@@ -116,7 +116,7 @@ async def lifespan(app: FastAPI):
                     ("Anjali Singh", "anjali@email.com", "9876503456"),
                     ("Suresh Patel", "suresh@email.com", "9876504567"),
                 ]:
-                    db.add(Customer(name=cdata[0], email=cdata[1], phone=cdata[2], loyalty_points=random.randint(0, 500), total_purchases=random.uniform(500, 5000)))
+                    db.add(Customer(name=cdata[0], email=cdata[1], phone=cdata[2], loyalty_points=random.randint(0, 500)))
                 db.commit()
                 logger.info("✅ Demo data seeded: users, categories, products, customers")
             else:
